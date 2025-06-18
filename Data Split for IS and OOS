@@ -1,0 +1,30 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from datetime import datetime
+
+# 1) LOAD & PREPARE
+file_path = r"C:\Users\liuy\OneDrive - OPTrust\Desktop\Monthly_equity+bond.xlsx"
+df = pd.read_excel(file_path)
+
+df["Date"] = pd.to_datetime(df["Date"])
+df.set_index("Date", inplace=True)
+
+# compute monthly log‐returns
+prices = df["_SPXD"].ffill()
+rets   = np.log(prices).diff().dropna()  # monthly log‐returns
+dates  = rets.index
+y_all  = rets.values
+
+# split into in‐sample vs out‐of‐sample
+split = "1969-12-31"
+split_date = pd.to_datetime(split)
+mask_in    = dates <= split_date
+mask_out   = dates  > split_date
+
+y_in   = y_all[mask_in]
+dates_in  = dates[mask_in]
+y_out  = y_all[mask_out]
+dates_out = dates[mask_out]
+T_in   = len(y_in)
+T_out  = len(y_out)
