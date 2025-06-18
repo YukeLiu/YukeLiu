@@ -1,0 +1,109 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import find_peaks
+
+# 1) LOAD & PREPARE
+df = pd.read_excel(r"C:\Users\liuy\OneDrive - OPTrust\Desktop\Monthly_equity+bond.xlsx")
+df["Date"] = pd.to_datetime(df["Date"])
+df.set_index("Date", inplace=True)
+price      = df["_SPXD"].ffill()
+running_max = price.cummax()
+drawdown    = price / running_max - 1   
+
+# 2) PAIR EACH PEAK TO NEXT TROUGh & SELECT THOSE WITH >= 20 pp DROP
+threshold = 0.20
+intervals = []
+
+# 3) FIND PEAKS & TROUGHS IN DRAWDOWN
+peak_idxs, _   = find_peaks(drawdown.values, width = 4)
+trough_idxs, _ = find_peaks(-drawdown.values)
+
+for i, pk in enumerate(peak_idxs):
+    if i+1 < len (peak_idxs):
+        next_pk = peak_idxs[i+1]
+        mask = (trough_idxs > pk) & (trough_idxs < next_pk)
+    else: mask = trough_idxs > pk
+    candidates = trough_idxs[mask]
+    if candidates.size == 0:
+        continue
+    
+    peak_val = drawdown.values[pk]
+    trough_vals = drawdown.values[candidates]
+    drops = peak_val - trough_vals
+    best_idx = np.argmax(drops)
+    tr = candidates[best_idx]
+    drop = drops[best_idx]
+
+    if drop >= threshold:
+        intervals.append((drawdown.index[pk], drawdown.index[tr]))
+
+# 4) PLOT & SHADE
+fig, ax = plt.subplots(figsize=(12,4))
+ax.plot(drawdown.index, drawdown, label="Drawdown")
+
+# shade only the selected peak to trough drops
+for t0, t1 in intervals:
+    ax.axvspan(t0, t1, color="gray", alpha=0.3)
+
+ax.plot(drawdown.index[peak_idxs],   drawdown.values[peak_idxs],   "o", label="Peaks")
+ax.plot(drawdown.index[trough_idxs], drawdown.values[trough_idxs], "v", label="Troughs")
+
+ax.set_title("Drawdown with ≥20 pp Peak→Trough Drops Shaded")
+ax.set_ylabel("Drawdown")
+#ax.legend(loc="upper right")
+plt.show()
+
+
+from operator import itemgetter
+
+# 1) sort intervals by start-time
+intervals_sorted = sorted(intervals, key=itemgetter(0))
+
+# 2) group any that overlap
+groups = []
+cur_group = [intervals_sorted[0]]
+cur_end   = intervals_sorted[0][1]
+for start, end in intervals_sorted[1:]:
+    if start <= cur_end:
+        cur_group.append((start, end))
+        cur_end = max(cur_end, end)
+    else:
+        groups.append(cur_group)
+        cur_group = [(start, end)]
+        cur_end   = end
+groups.append(cur_group)
+
+# 3) for each group, pick
+#    - the intersection if more than one interval,
+#    - or the sole interval if only one
+final_intervals = []
+for g in groups:
+    if len(g) > 1:
+        t0 = max(iv[0] for iv in g)
+        t1 = min(iv[1] for iv in g)
+        if t0 < t1:
+            final_intervals.append((t0, t1))
+    else:
+        final_intervals.append(g[0])
+
+# 4) then plot only final_intervals
+fig, ax = plt.subplots(figsize=(12,4))
+ax.plot(drawdown.index, drawdown, label="Drawdown")
+for t0, t1 in final_intervals:
+    ax.axvspan(t0, t1, color="gray", alpha=0.3)
+ax.set_title("Drawdown with ≥20 pp Drops")
+ax.set_ylabel("Drawdown")
+ax.axhline(y=-0.20, color = "r", linestyle = '--', linewidth = 2)
+#ax.legend(loc="upper right")
+
+
+rets = np.log(df['_SPXD']).diff()
+fig, ax = plt.subplots(figsize=(12,4))
+ax.plot(drawdown.index, rets, label='SPXD', color='blue')
+for t0, t1 in final_intervals:
+    ax.axvspan(t0, t1, color="gray", alpha=0.3)
+ax.set_title('SPXD Time Series with Drawdowns Greater Than 20%')
+ax.set_ylabel("Log Return")
+ax.legend(loc="upper right")
+
