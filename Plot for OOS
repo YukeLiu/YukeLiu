@@ -1,0 +1,80 @@
+aft_intervals = [
+    (start, end)
+    for start, end in filtered_intervals
+    if datetime.strptime(start, "%Y-%m-%d") > cutoff_date
+]
+
+cum_ret1 = np.cumsum(y_out)
+
+def plot_dual_series(title, ylabel_left, ylabel_right, y1, y2, dates, legend1, legend2):
+    fig, ax1 = plt.subplots(figsize=(12, 4))
+    ax1.plot(dates, y1, 'r-', label=legend1)
+    ax1.plot(dates, y2, 'b-', label=legend2)
+    ax1.set_ylabel(ylabel_left)
+    ax1.set_xlabel("Date")
+    ax1.set_title(title)
+    
+    ax1.tick_params(axis='y')
+    ax1.grid(True, alpha=0.3)
+    ax1.legend(loc="upper left")
+    for t0, t1 in aft_intervals:
+        ax1.axvspan(t0, t1, color="gray", alpha=0.3)
+
+    
+    ax2 = ax1.twinx()
+    ax2.plot(dates, cum_ret1, color="black", linewidth=1.2, label = 'Cumulative Log Return')
+    #ax2.axhline(y=0.6, linestyle = '--', linewidth = 2)
+    ax2.tick_params(axis='y')
+    ax2.set_ylabel("Cumulative Log Return")
+    
+
+    plt.tight_layout()
+    plt.show()
+
+# Plot P (forecasted probabilities)
+plot_dual_series(
+    title="Forecasted Transition Probability",
+    ylabel_left="Probability",
+    ylabel_right="",
+    y1=p_high_fore,
+    y2=p_low_fore,
+    dates=dates_out,
+    legend1="Filtered P(High-Vol Crash)",
+    legend2="Filtered P(Low-Vol Crash)"
+)
+
+# Plot mu path
+plot_dual_series(
+    title="Filtered Regime Mean (μ) Over Time",
+    ylabel_left="Mean (μ)",
+    ylabel_right="",
+    y1=mus_path[:, high_vol_crash],
+    y2=mus_path[:, low_vol_crash],
+    dates=dates_out,
+    legend1="μ (High-Vol Crash)",
+    legend2="μ (Low-Vol Crash)"
+)
+
+# Plot sigma² path
+plot_dual_series(
+    title="Filtered Regime Variance (σ²) Over Time",
+    ylabel_left="Variance (σ²)",
+    ylabel_right="",
+    y1=sig2_path[:, high_vol_crash],
+    y2=sig2_path[:, low_vol_crash],
+    dates=dates_out,
+    legend1="σ² (High-Vol Crash)",
+    legend2="σ² (Low-Vol Crash)"
+)
+
+# Plot alpha (filtered probabilities)
+plot_dual_series(
+    title="Filtered Regime Probability (α) Over Time",
+    ylabel_left="Filtered Probability (α)",
+    ylabel_right="",
+    y1=alphas_path[:, high_vol_crash],
+    y2=alphas_path[:, low_vol_crash],
+    dates=dates_out,
+    legend1="α (High-Vol Crash)",
+    legend2="α (Low-Vol Crash)"
+)
