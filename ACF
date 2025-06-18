@@ -1,0 +1,22 @@
+import statsmodels.api as sm
+from statsmodels.tsa.stattools import acf
+from statsmodels.graphics.tsaplots import plot_acf
+
+price.dropna()
+rets = np.log(price).diff().dropna()
+
+lag1_ac = acf(rets, nlags=1, fft=False)[1]
+print(f"Lag-1 autocorrelation: {lag1_ac:.4f}")
+
+rets_lag1 = rets.shift(1).dropna()
+y = rets.loc[rets_lag1.index]
+X = sm.add_constant(rets_lag1)
+ar1_mod = sm.OLS(y, X).fit()
+print(ar1_mod.summary())
+
+dw = sm.stats.durbin_watson(ar1_mod.resid)
+print(f"Durbin-Watson statistic: {dw:.3f}")
+
+plot_acf(rets, alpha = 0.01)
+plt.title("Autocorrelation Function for Equity Price")
+plt.show()
