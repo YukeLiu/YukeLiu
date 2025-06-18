@@ -1,0 +1,63 @@
+# 2) FIT A STANDARD k-STATE MARKOV-SWITCHING MODEL
+
+K = 3
+np.random.seed(42)
+
+model = sm.tsa.MarkovRegression(
+    endog= y_in,
+    k_regimes=K,
+    trend="c",
+    switching_variance=True
+)
+
+custom_start = [0.8, 0.1, 0.1, 0.1, 0.8, 0.1,
+                -0.5, 0.0, 0.5,
+                0.02, 0.005, 0.005]
+
+res = model.fit(em_iter=10, 
+                search_reps=10, 
+                start_params=custom_start)
+print(res.summary())
+
+# 3) EXTRACT SMOOTHED REGIME-PROBABILITIES
+param_names = res.model.param_names
+print(param_names)
+# → ['p[0->0]', 'p[1->0]', 'const[0]', 'const[1]', 'sigma2[0]', 'sigma2[1]'] for two regimes
+params = pd.Series(res.params, index=param_names)
+
+mu = np.array([params[f"const[{i}]"] for i in range (K)])
+sig2 = np.array([params[f"sigma2[{i}]"] for i in range (K)])
+
+# 4) Decide which regime is “hv-crash” and which regime is "lv-crash"
+def regime_id(mu, sig2):
+    pos_idxs = [i for i in range(K) if mu[i] > 0]
+    neg_idxs = [i for i in range(K) if mu[i] <= 0]
+
+    if len(pos_idxs) == 1:
+        normal = pos_idxs[0]
+        neg0, neg1 = neg_idxs
+        high_vol_crash = neg_idxs[np.argmax(sig2[neg_idxs])]
+        low_vol_crash = neg_idxs[1] if high_vol_crash == neg_idxs[0] else neg_idxs[0]
+    elif len(pos_idxs) == 2:
+        normal = pos_idxs[np.argmin(sig2[pos_idxs])]
+        low_vol_crash = pos_idxs[1] if normal == pos_idxs[0] else pos_idxs[0]
+        high_vol_crash = neg_idxs[0]
+    elif len(pos_idxs) == K:
+        high_vol_crash = pos_idxs[int(np.argmax(sig2[pos_idxs]))]
+        low_vol_crash = pos_idxs[int(np.argmin(sig2[pos_idxs]))]
+    else:
+        high_vol_crash = neg_idxs[int(np.argmax(sig2[neg_idxs]))]
+        low_vol_crash = neg_idxs[int(np.argmin(sig2[neg_idxs]))]
+    return normal, high_vol_crash, low_vol_crash
+
+normal, high_vol_crash, low_vol_crash = regime_id(mu, sig2)
+    
+
+# 5) Extract the smoothed probabilities array 
+smoothed = res.smoothed_marginal_probabilities
+
+# 6) Pull out the regimes' smoothed probability column
+p_high_vol = smoothed[:, high_vol_crash]
+p_low_vol = smoothed[:, low_vol_crash]
+p_norm = smoothed[:, normal]
+
