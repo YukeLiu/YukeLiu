@@ -1,0 +1,124 @@
+# 7) Plot
+cum_ret = np.cumsum(y_in) 
+
+filtered_intervals = [
+    (t0.strftime("%Y-%m-%d"), t1.strftime("%Y-%m-%d"))
+    for t0, t1 in final_intervals
+]
+
+cutoff_date = datetime.strptime(split, "%Y-%m-%d")
+pre_intervals = [
+    (start, end)
+    for start, end in filtered_intervals
+    if datetime.strptime(start, "%Y-%m-%d") < cutoff_date
+]
+
+fig, ax1 = plt.subplots(figsize=(10,4))
+ax1.plot(dates_in, cum_ret, color="black", linewidth=1.2)
+ax1.set_xlabel('Dates')
+ax1.set_ylabel("Cumulative Log-Return")
+ax1.tick_params(axis='y')
+
+ax2 = ax1.twinx()
+ax2.plot(dates_in, p_high_vol, color="tab:red", linewidth=1.5, label = 'Smoothed P(High-Vol Crash)')
+ax2.plot(dates_in, p_low_vol, color="tab:blue", linewidth=1.5, label = 'Smoothed P(Low-Vol Crash)')
+ax2.tick_params(axis='y', labelcolor='C1')
+ax2.set_ylabel("Smoothed Probability")
+
+# legends
+lines, labels = ax1.get_legend_handles_labels()
+lines2, labels2 = ax2.get_legend_handles_labels()
+ax1.legend(lines+lines2, labels+labels2, loc='upper left')
+
+plt.title("Cumulative Returns & Smoothed High-Vol State")
+for t0, t1 in pre_intervals:
+    ax1.axvspan(t0, t1, color="gray", alpha=0.3)
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# 7) Plot
+fig, ax1 = plt.subplots(figsize=(10,4))
+ax1.plot(dates_in, cum_ret, color="black", linewidth=1.2)
+ax1.set_xlabel('Dates')
+ax1.set_ylabel("Cumulative Log-Return")
+ax1.tick_params(axis='y')
+
+ax2 = ax1.twinx()
+ax2.plot(dates_in, p_norm, color="tab:red", linewidth=1.5, label = 'Smoothed P(Normal)')
+ax2.axhline(y=0.6, color = "yellow", linestyle = '--', linewidth = 2)
+ax2.tick_params(axis='y', labelcolor='C1')
+ax2.set_ylabel("Smoothed Probability")
+
+# legends
+lines, labels = ax1.get_legend_handles_labels()
+lines2, labels2 = ax2.get_legend_handles_labels()
+ax1.legend(lines+lines2, labels+labels2, loc='upper left')
+
+plt.title("Cumulative Returns & Smoothed Normal State")
+for t0, t1 in pre_intervals:
+    ax1.axvspan(t0, t1, color="gray", alpha=0.3)
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+
+# 6) Pull out the regimes' filtered probability column
+filtered = res.filtered_marginal_probabilities
+p_high_vol = filtered[:, high_vol_crash]
+p_low_vol = filtered[:, low_vol_crash]
+
+# 7) Plot
+fig, ax1 = plt.subplots(figsize=(10,4))
+ax1.plot(dates_in, cum_ret, color="black", linewidth=1.2)
+ax1.set_xlabel('Dates')
+ax1.set_ylabel("Cumulative Log-Return")
+ax1.tick_params(axis='y')
+
+ax2 = ax1.twinx()
+ax2.plot(dates_in, p_high_vol, color="tab:red", linewidth=1.5, label = 'Filtered P(High-Vol Crash)')
+ax2.plot(dates_in, p_low_vol, color="tab:blue", linewidth=1.5, label = 'Filtered P(Low-Vol Crash)')
+ax2.tick_params(axis='y', labelcolor='C1')
+ax2.set_ylabel("Filtered Probability")
+
+# legends
+lines, labels = ax1.get_legend_handles_labels()
+lines2, labels2 = ax2.get_legend_handles_labels()
+ax1.legend(lines+lines2, labels+labels2, loc='upper left')
+
+plt.title("Cumulative Returns & Filtered High-Vol State")
+for t0, t1 in pre_intervals:
+    ax1.axvspan(t0, t1, color="gray", alpha=0.3)
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# 6) Pull out the regimes' smoothed probability column
+filtered = res.filtered_marginal_probabilities
+p_norm = filtered[:, normal]
+
+# 7) Plot
+fig, ax1 = plt.subplots(figsize=(10,4))
+ax1.plot(dates_in, cum_ret, color="black", linewidth=1.2)
+ax1.set_xlabel('Dates')
+ax1.set_ylabel("Cumulative Log-Return")
+ax1.tick_params(axis='y')
+
+ax2 = ax1.twinx()
+ax2.plot(dates_in, p_norm, color="tab:red", linewidth=1.5, label = 'Filtered P(Normal)')
+ax2.axhline(y=0.6, color = "yellow", linestyle = '--', linewidth = 2)
+ax2.tick_params(axis='y', labelcolor='C1')
+ax2.set_ylabel("Filtered Probability")
+
+# legends
+lines, labels = ax1.get_legend_handles_labels()
+lines2, labels2 = ax2.get_legend_handles_labels()
+ax1.legend(lines+lines2, labels+labels2, loc='upper left')
+
+plt.title("Cumulative Returns & Filtered Normal State")
+for t0, t1 in pre_intervals:
+    ax1.axvspan(t0, t1, color="gray", alpha=0.3)
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
